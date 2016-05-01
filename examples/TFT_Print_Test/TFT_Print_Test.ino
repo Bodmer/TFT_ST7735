@@ -4,11 +4,7 @@
  This sketch used font 2, 4, 7
  
  Make sure all the required fonts are loaded by editting the
- User_Setup.h file in the TFT_S6D02A1 library folder.
-
- If using an UNO or Mega (ATmega328 or ATmega2560 processor) then for best
- performance use the F_AS_T option found in the User_Setup.h file in the
- TFT_S6D02A1 library folder.
+ User_Setup.h file in the TFT_ST7735 library folder.
 
  The library uses the hardware SPI pins only:
    For UNO, Nano, Micro Pro ATmega328 based processors
