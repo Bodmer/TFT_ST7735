@@ -19,6 +19,7 @@
 #define INITR_REDTAB    0x1
 #define INITR_BLACKTAB  0x2
 #define INITR_GREENTAB2 0x3 // Use if you get random pixels on two edges of green tab display
+#define INITB  0xB
 
 // Include header file that defines the fonts loaded and the pins to be used
 #include <User_Setup.h>

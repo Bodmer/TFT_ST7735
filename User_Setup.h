@@ -4,6 +4,7 @@
 // Define the type of display from the colour of the tab on the screen protector
 // Comment out all but one of these options
 
+//#define TAB_COLOUR INITB
 //#define TAB_COLOUR INITR_GREENTAB
 //#define TAB_COLOUR INITR_REDTAB
 //#define TAB_COLOUR INITR_BLACKTAB

@@ -355,7 +355,7 @@ void TFT_ST7735::init(void)
 
      tabcolor = TAB_COLOUR;
 
-     if (tabcolor == INITR_BLACKTAB)
+     if (tabcolor == INITB)
      {
        commandList(Bcmd);
      }
