@@ -23,6 +23,13 @@
 #include "wiring_private.h"
 #include <SPI.h>
 
+inline void spiWait17(void) __attribute__((always_inline));
+inline void spiWait15(void) __attribute__((always_inline));
+inline void spiWait14(void) __attribute__((always_inline));
+inline void spiWrite16(uint16_t data, int16_t count) __attribute__((always_inline));
+inline void spiWrite16s(uint16_t data) __attribute__((always_inline));
+inline void spiWrite16R(uint16_t data, int16_t count) __attribute__((always_inline));
+
 /***************************************************************************************
 ** Function name:           TFT_ST7735
 ** Description:             Constructor , we must use hardware SPI pins
@@ -2111,7 +2118,7 @@ int TFT_ST7735::drawFloat(float floatNumber, int dp, int poX, int poY, int font)
 ** Function name:           spiWrite16
 ** Descriptions:            Delay based assembler loop for fast SPI write
 ***************************************************************************************/
-inline void TFT_ST7735::spiWrite16(uint16_t data, int16_t count)
+inline void spiWrite16(uint16_t data, int16_t count)
 {
 // We can enter this loop with 0 pixels to draw, so we need to check this
 // if(count<1) { Serial.print("#### Less than 1 ####"); Serial.println(count);}
@@ -2154,7 +2161,7 @@ inline void TFT_ST7735::spiWrite16(uint16_t data, int16_t count)
 ** Function name:           spiWrite16s
 ** Descriptions:            Write 16 bits, do not wait after last byte sent
 ***************************************************************************************/
-inline void TFT_ST7735::spiWrite16s(uint16_t data)
+inline void spiWrite16s(uint16_t data)
 {
   uint8_t temp;
   asm volatile
@@ -2167,7 +2174,7 @@ inline void TFT_ST7735::spiWrite16s(uint16_t data)
     "4:	nop     \n" // 17
 
     "	out	%[spi],%[lo]\n"			// write SPI data
-
+    "	nop         \n"	// 1
     "5:\n"
     : [temp] "=d" (temp)
     : [spi] "i" (_SFR_IO_ADDR(SPDR)), [lo] "r" ((uint8_t)data), [hi] "r" ((uint8_t)(data>>8))
@@ -2180,7 +2187,7 @@ inline void TFT_ST7735::spiWrite16s(uint16_t data)
 ** Function name:           spiWrite16R with hi<>lo reversed (not used)
 ** Descriptions:            Delay based assembler loop for fast SPI write
 ***************************************************************************************/
-inline void TFT_ST7735::spiWrite16R(uint16_t data, int16_t count)
+inline void spiWrite16R(uint16_t data, int16_t count)
 {
 // We can enter this loop with 0 pixels to draw, so we need to check this
 // if(count<1) { Serial.print("#### Less than 1 ####"); Serial.println(count);}
@@ -2224,7 +2231,7 @@ inline void TFT_ST7735::spiWrite16R(uint16_t data, int16_t count)
 ** Function name:           spiWait
 ** Descriptions:            17 cycle delay
 ***************************************************************************************/
-inline void TFT_ST7735::spiWait17(void)
+inline void spiWait17(void)
 {
   asm volatile
   (
@@ -2240,7 +2247,7 @@ inline void TFT_ST7735::spiWait17(void)
 ** Function name:           spiWait
 ** Descriptions:            15 cycle delay
 ***************************************************************************************/
-inline void TFT_ST7735::spiWait15(void)
+inline void spiWait15(void)
 {
   asm volatile
   (
@@ -2258,7 +2265,7 @@ inline void TFT_ST7735::spiWait15(void)
 ** Function name:           spiWait
 ** Descriptions:            14 cycle delay
 ***************************************************************************************/
-inline void TFT_ST7735::spiWait14(void)
+inline void spiWait14(void)
 {
   asm volatile
   (

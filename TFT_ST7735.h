@@ -287,10 +287,6 @@ class TFT_ST7735 : public Print {
            backupSPCR(void),
            restoreSPCR(void),
 
-           spiWait17(void),
-           spiWait15(void),
-           spiWait14(void),
-
            drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color),
            drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color),
            drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color),
@@ -348,10 +344,6 @@ class TFT_ST7735 : public Print {
            width(void),
            textWidth(char *string, int font),
            fontHeight(int font);
-
-    void  spiWrite16(uint16_t data, int16_t count);
-    void  spiWrite16s(uint16_t data);
-    void  spiWrite16R(uint16_t data, int16_t count);
 
  virtual  size_t write(uint8_t);
 
