@@ -67,12 +67,6 @@
 //
 // ##################################################################################
 
-// If your sketch uses the GLCD font in size 1 with background then uncomment
-// this next line will speed up rendering x5, code size will increase 136 bytes
-// Only worth it if you print lots of GLCD font text...
-
-#define FAST_GLCD
-
 // Uncomment the following #define to invoke a 20% faster drawLine() function
 // This speeds up other funtions such as triangle outline drawing too
 // Code size penalty is about 72 bytes

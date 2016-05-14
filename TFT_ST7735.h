@@ -368,6 +368,8 @@ class TFT_ST7735 : public Print {
 
   uint16_t textcolor, textbgcolor, fontsloaded;
 
+  uint8_t  addr_row, addr_col;
+
   uint8_t  textfont,
            textsize,
            textdatum,

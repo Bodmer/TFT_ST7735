@@ -65,6 +65,9 @@ TFT_ST7735::TFT_ST7735(int16_t w, int16_t h)
   textdatum = 0; // Left text alignment is default
   fontsloaded = 0;
 
+  addr_row = 0xFF;
+  addr_col = 0xFF;
+
 #ifdef LOAD_GLCD
   fontsloaded = 0x0002; // Bit 1 set
 #endif
@@ -433,10 +436,10 @@ void TFT_ST7735::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
   int16_t ddF_y = - r - r;
   int16_t x = 0;
 
-  drawPixel(x0  , y0 + r, color);
-  drawPixel(x0  , y0 - r, color);
   drawPixel(x0 + r, y0  , color);
   drawPixel(x0 - r, y0  , color);
+  drawPixel(x0  , y0 - r, color);
+  drawPixel(x0  , y0 + r, color);
 
   while (x < r) {
     if (f >= 0) {
@@ -450,12 +453,12 @@ void TFT_ST7735::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 
     drawPixel(x0 + x, y0 + r, color);
     drawPixel(x0 - x, y0 + r, color);
-    drawPixel(x0 + x, y0 - r, color);
     drawPixel(x0 - x, y0 - r, color);
+    drawPixel(x0 + x, y0 - r, color);
     drawPixel(x0 + r, y0 + x, color);
     drawPixel(x0 - r, y0 + x, color);
-    drawPixel(x0 + r, y0 - x, color);
     drawPixel(x0 - r, y0 - x, color);
+    drawPixel(x0 + r, y0 - x, color);
   }
 }
 
@@ -479,22 +482,24 @@ void TFT_ST7735::drawCircleHelper( int16_t x0, int16_t y0, int16_t r, uint8_t co
     x++;
     ddF_x += 2;
     f     += ddF_x;
+    if (cornername & 0x8) {
+      drawPixel(x0 - r, y0 + x, color);
+      drawPixel(x0 - x, y0 + r, color);
+    }
     if (cornername & 0x4) {
-      drawPixel(x0 + x, y0 + r, color);
       drawPixel(x0 + r, y0 + x, color);
+      drawPixel(x0 + x, y0 + r, color);
     }
     if (cornername & 0x2) {
       drawPixel(x0 + x, y0 - r, color);
       drawPixel(x0 + r, y0 - x, color);
     }
-    if (cornername & 0x8) {
-      drawPixel(x0 - r, y0 + x, color);
-      drawPixel(x0 - x, y0 + r, color);
-    }
     if (cornername & 0x1) {
-      drawPixel(x0 - r, y0 - x, color);
       drawPixel(x0 - x, y0 - r, color);
+      drawPixel(x0 - r, y0 - x, color);
+
     }
+
   }
 }
 
@@ -561,8 +566,8 @@ void TFT_ST7735::drawEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry, uin
   {
     drawPixel(x0 + x, y0 + y, color);
     drawPixel(x0 - x, y0 + y, color);
-    drawPixel(x0 + x, y0 - y, color);
     drawPixel(x0 - x, y0 - y, color);
+    drawPixel(x0 + x, y0 - y, color);
     if (s >= 0)
     {
       s += fx2 * (1 - y);
@@ -575,8 +580,8 @@ void TFT_ST7735::drawEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry, uin
   {
     drawPixel(x0 + x, y0 + y, color);
     drawPixel(x0 - x, y0 + y, color);
-    drawPixel(x0 + x, y0 - y, color);
     drawPixel(x0 - x, y0 - y, color);
+    drawPixel(x0 + x, y0 - y, color);
     if (s >= 0)
     {
       s += fy2 * (1 - x);
@@ -665,9 +670,10 @@ void TFT_ST7735::drawRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16
   drawFastVLine(x + w - 1, y + r  , h - r - r, color); // Right
   // draw four corners
   drawCircleHelper(x + r    , y + r    , r, 1, color);
+  drawCircleHelper(x + r    , y + h - r - 1, r, 8, color);
   drawCircleHelper(x + w - r - 1, y + r    , r, 2, color);
   drawCircleHelper(x + w - r - 1, y + h - r - 1, r, 4, color);
-  drawCircleHelper(x + r    , y + h - r - 1, r, 8, color);
+
 }
 
 /***************************************************************************************
@@ -966,7 +972,6 @@ void TFT_ST7735::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
 
 spi_begin();
 
-#ifdef FAST_GLCD
 // This is about 5 times faster for textsize=1 with background (at 210us per character)
 // but it is not really worth the extra 168 bytes needed...
   if ((size==1) && fillbg)
@@ -1001,8 +1006,6 @@ spi_begin();
     while (!(SPSR & _BV(SPIF)));
   }
   else
-#endif // FAST_GLCD
-
   {
     for (int8_t i = 0; i < 6; i++ ) {
       uint8_t line;
@@ -1013,12 +1016,17 @@ spi_begin();
 
       if (size == 1) // default size
       {
-        for (int8_t j = 0; j < 8; j++) {
-          if (line & 0x1) drawPixel(x + i, y + j, color);
-        #ifndef FAST_GLCD
-          else if (fillbg) drawPixel(x + i, y + j, bg); // Comment out this line if using fast code above
-        #endif
-          line >>= 1;
+        if (line & 0x0F) {
+          if (line & 0x1)  drawPixel(x + i, y, color);
+          if (line & 0x2)  drawPixel(x + i, y + 1, color);
+          if (line & 0x4)  drawPixel(x + i, y + 2, color);
+          if (line & 0x8)  drawPixel(x + i, y + 3, color);
+        }
+        if (line & 0xF0) {
+          if (line & 0x10) drawPixel(x + i, y + 4, color);
+          if (line & 0x20) drawPixel(x + i, y + 5, color);
+          if (line & 0x40) drawPixel(x + i, y + 6, color);
+          if (line & 0x80) drawPixel(x + i, y + 7, color);
         }
       }
       else {  // big size
@@ -1059,11 +1067,8 @@ void TFT_ST7735::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
   spi_begin();
-
-  x0 += colstart;
-  y0 += rowstart;
-  x1 += colstart;
-  y1 += rowstart;
+  addr_row = 0xFF;
+  addr_col = 0xFF;
 
   // Column addr set
   TFT_DC_C;
@@ -1072,20 +1077,20 @@ void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
   spiWait15();
 
   TFT_DC_D;
-  SPDR = x0 >> 8; spiWait17();
-  SPDR = x0; spiWait17();
-  SPDR = x1 >> 8; spiWait17();
-  SPDR = x1; spiWait14();
+  SPDR = 0; spiWait14();
+  SPDR = x0+colstart; spiWait17();
+  SPDR = 0; spiWait14();
+  SPDR = x1+colstart; spiWait14();
 
   // Row addr set
   TFT_DC_C;
   SPDR = ST7735_RASET; spiWait15();
 
   TFT_DC_D;
-  SPDR = y0 >> 8; spiWait17();
-  SPDR = y0; spiWait17();
-  SPDR = y1 >> 8; spiWait17();
-  SPDR = y1; spiWait14();
+  SPDR = 0; spiWait14();
+  SPDR = y0+rowstart; spiWait17();
+  SPDR = 0; spiWait14();
+  SPDR = y1+rowstart; spiWait14();
 
   // write to RAM
   TFT_DC_C;
@@ -1108,34 +1113,39 @@ void TFT_ST7735::drawPixel(uint16_t x, uint16_t y, uint16_t color)
   if ((x >= _width) || (y >= _height)) return;
   spi_begin();
 
-  x += colstart;
-  y += rowstart;
-
   // Column addr set
   TFT_DC_C;
   TFT_CS_L;
+
+if (addr_row != x) {
+  addr_row = x;
   SPDR = ST7735_CASET;
   spiWait15();
 
   TFT_DC_D;
-  SPDR = x >> 8; spiWait17();
-  SPDR = x; spiWait15(); x++; 
-  SPDR = x >> 8; spiWait17();
-  SPDR = x; spiWait14();
+  SPDR = 0; spiWait14();
+  SPDR = x+colstart; spiWait17();
+  SPDR = 0; spiWait14();
+  SPDR = x+colstart; spiWait14();
 
   // Row addr set
   TFT_DC_C;
-  //TFT_CS_L;
+}
+
+if (addr_col != y) {
+  addr_col = y;
   SPDR = ST7735_RASET; spiWait15();
 
   TFT_DC_D;
-  SPDR = y >> 8; spiWait17();
-  SPDR = y; spiWait15(); y++; 
-  SPDR = y >> 8; spiWait17();
-  SPDR = y; spiWait14();
+  SPDR = 0; spiWait14();
+  SPDR = y+rowstart; spiWait17(); 
+  SPDR = 0; spiWait14();
+  SPDR = y+rowstart; spiWait14();
 
   // write to RAM
   TFT_DC_C;
+}
+
   SPDR = ST7735_RAMWR; spiWait15();
 
   TFT_DC_D;
@@ -1489,6 +1499,8 @@ uint16_t TFT_ST7735::color565(uint8_t r, uint8_t g, uint8_t b)
 void TFT_ST7735::setRotation(uint8_t m)
 {
   byte spsr = SPSR;// We need this here for some reason...
+  addr_row = 0xFF;
+  addr_col = 0xFF;
 
   rotation = m % 4;
   spi_begin();
