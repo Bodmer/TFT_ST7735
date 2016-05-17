@@ -159,7 +159,7 @@ void loop(void)
   tft.setCursor(0, 0);
   tft.setTextColor(TFT_MAGENTA);
 
-  tft.println(F(" TFT_7735"));
+  tft.println(F("Bodmer's TFT_ST7735"));
 
   tft.setTextSize(1);
   tft.setTextColor(TFT_WHITE);
@@ -340,7 +340,7 @@ uint32_t testHaD()
   
   for (int i = 0; i < 0x10; i++)
   {
-    tft.setWindow(0, 0, tft.width()-1, tft.height()-1);
+    tft.setAddrWindow(0, 0, tft.width()-1, tft.height()-1);
 
     uint16_t cnt = 0;
     uint16_t color = tft.color565((i << 4) | i, (i << 4) | i, (i << 4) | i);

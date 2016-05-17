@@ -108,7 +108,7 @@ void midline() {
   if ((ball_x<dashline_x-ball_w) && (ball_x > dashline_x+dashline_w)) return;
 
   // Quick way to draw a dashed line
-  tft.setWindow(dashline_x,0,dashline_x+dashline_w-1,h);
+  tft.setAddrWindow(dashline_x,0,dashline_x+dashline_w-1,h);
   
   for(int16_t i = 0; i < dashline_n; i+=2) {
     tft.pushColor(WHITE, dashline_w*dashline_h); // push dash pixels

@@ -26,6 +26,7 @@
 inline void spiWait17(void) __attribute__((always_inline));
 inline void spiWait15(void) __attribute__((always_inline));
 inline void spiWait14(void) __attribute__((always_inline));
+inline void spiWait12(void) __attribute__((always_inline));
 inline void spiWrite16(uint16_t data, int16_t count) __attribute__((always_inline));
 inline void spiWrite16s(uint16_t data) __attribute__((always_inline));
 inline void spiWrite16R(uint16_t data, int16_t count) __attribute__((always_inline));
@@ -455,6 +456,7 @@ void TFT_ST7735::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
     drawPixel(x0 - x, y0 + r, color);
     drawPixel(x0 - x, y0 - r, color);
     drawPixel(x0 + x, y0 - r, color);
+
     drawPixel(x0 + r, y0 + x, color);
     drawPixel(x0 - r, y0 + x, color);
     drawPixel(x0 - r, y0 - x, color);
@@ -487,17 +489,16 @@ void TFT_ST7735::drawCircleHelper( int16_t x0, int16_t y0, int16_t r, uint8_t co
       drawPixel(x0 - x, y0 + r, color);
     }
     if (cornername & 0x4) {
-      drawPixel(x0 + r, y0 + x, color);
       drawPixel(x0 + x, y0 + r, color);
+      drawPixel(x0 + r, y0 + x, color);
     }
     if (cornername & 0x2) {
-      drawPixel(x0 + x, y0 - r, color);
       drawPixel(x0 + r, y0 - x, color);
+      drawPixel(x0 + x, y0 - r, color);
     }
     if (cornername & 0x1) {
       drawPixel(x0 - x, y0 - r, color);
       drawPixel(x0 - r, y0 - x, color);
-
     }
 
   }
@@ -972,13 +973,12 @@ void TFT_ST7735::drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
 
 spi_begin();
 
-// This is about 5 times faster for textsize=1 with background (at 210us per character)
-// but it is not really worth the extra 168 bytes needed...
+// This is about 5 times faster for textsize=1 with background (at 200us per character)
   if ((size==1) && fillbg)
   {
     byte column[6];
     byte mask = 0x1;
-    setAddrWindow(x, y, x+5, y+8);
+    setWindow(x, y, x+5, y+8);
     for (int8_t i = 0; i < 5; i++ ) column[i] = pgm_read_byte(font + (c * 5) + i);
     column[5] = 0;
 
@@ -1007,29 +1007,23 @@ spi_begin();
   }
   else
   {
-    for (int8_t i = 0; i < 6; i++ ) {
-      uint8_t line;
-      if (i == 5)
-        line = 0x0;
-      else
-        line = pgm_read_byte(font + (c * 5) + i);
-
-      if (size == 1) // default size
-      {
-        if (line & 0x0F) {
-          if (line & 0x1)  drawPixel(x + i, y, color);
-          if (line & 0x2)  drawPixel(x + i, y + 1, color);
-          if (line & 0x4)  drawPixel(x + i, y + 2, color);
-          if (line & 0x8)  drawPixel(x + i, y + 3, color);
-        }
-        if (line & 0xF0) {
-          if (line & 0x10) drawPixel(x + i, y + 4, color);
-          if (line & 0x20) drawPixel(x + i, y + 5, color);
-          if (line & 0x40) drawPixel(x + i, y + 6, color);
-          if (line & 0x80) drawPixel(x + i, y + 7, color);
-        }
+    if (size == 1) // default size
+    {
+      for (int8_t i = 0; i < 5; i++ ) {
+        uint8_t line = pgm_read_byte(font + c*5 + i);
+        if (line & 0x1)  drawPixel(x + i, y, color);
+        if (line & 0x2)  drawPixel(x + i, y + 1, color);
+        if (line & 0x4)  drawPixel(x + i, y + 2, color);
+        if (line & 0x8)  drawPixel(x + i, y + 3, color);
+        if (line & 0x10) drawPixel(x + i, y + 4, color);
+        if (line & 0x20) drawPixel(x + i, y + 5, color);
+        if (line & 0x40) drawPixel(x + i, y + 6, color);
+        if (line & 0x80) drawPixel(x + i, y + 7, color);
       }
-      else {  // big size
+    }
+    else {  // big size
+      for (int8_t i = 0; i < 5; i++ ) {
+        uint8_t line = pgm_read_byte(font + c*5 + i);
         for (int8_t j = 0; j < 8; j++) {
           if (line & 0x1) fillRect(x + (i * size), y + (j * size), size, size, color);
           else if (fillbg) fillRect(x + i * size, y + j * size, size, size, bg);
@@ -1038,6 +1032,7 @@ spi_begin();
       }
     }
   }
+
 spi_end();
 
 #endif // LOAD_GLCD
@@ -1045,34 +1040,35 @@ spi_end();
 
 /***************************************************************************************
 ** Function name:           setAddrWindow
-** Description:             define an area to rexeive a stream of pixels
+** Description:             define an area to receive a stream of pixels
 ***************************************************************************************/
 // Chip select is high at the end of this function
 
-void TFT_ST7735::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
+void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
   spi_begin();
-  setAddrWindow(x0, y0, x1, y1);
+  setWindow(x0, y0, x1, y1);
   TFT_CS_H;
   while (!(SPSR & _BV(SPIF)));
   spi_end();
 }
 
 /***************************************************************************************
-** Function name:           setAddrWindow
-** Description:             define an area to rexeive a stream of pixels
+** Function name:           setWindow
+** Description:             define an area to receive a stream of pixels
 ***************************************************************************************/
-// Chip select stays low, use setWindow() from sketches
+// Chip select stays low, use setAddrWindow() from sketches
 
-void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
+void TFT_ST7735::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
   spi_begin();
-  addr_row = 0xFF;
-  addr_col = 0xFF;
+  addr_row = x0;
+  addr_col = y0;
 
   // Column addr set
   TFT_DC_C;
   TFT_CS_L;
+
   SPDR = ST7735_CASET;
   spiWait15();
 
@@ -1096,8 +1092,6 @@ void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
   TFT_DC_C;
   SPDR = ST7735_RAMWR; spiWait14();
 
-  //CS, HIGH;
-  //TFT_CS_H;
   TFT_DC_D;
 
   spi_end();
@@ -1107,42 +1101,40 @@ void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 ** Function name:           drawPixel
 ** Description:             push a single pixel at an arbitrary position
 ***************************************************************************************/
+// Smarter version that takes advantage of often used orthogonal coordinate plots
+// where either x or y does not change
 void TFT_ST7735::drawPixel(uint16_t x, uint16_t y, uint16_t color)
 {
   // Faster range checking, possible because x and y are unsigned
   if ((x >= _width) || (y >= _height)) return;
   spi_begin();
 
-  // Column addr set
   TFT_DC_C;
   TFT_CS_L;
 
-if (addr_row != x) {
-  addr_row = x;
+if (addr_col != x) {
   SPDR = ST7735_CASET;
-  spiWait15();
-
+  spiWait12();
+  addr_col = x;
   TFT_DC_D;
   SPDR = 0; spiWait14();
   SPDR = x+colstart; spiWait17();
   SPDR = 0; spiWait14();
   SPDR = x+colstart; spiWait14();
 
-  // Row addr set
   TFT_DC_C;
 }
 
-if (addr_col != y) {
-  addr_col = y;
-  SPDR = ST7735_RASET; spiWait15();
-
+if (addr_row != y) {
+  SPDR = ST7735_RASET;
+  spiWait12();
+  addr_row = y;
   TFT_DC_D;
   SPDR = 0; spiWait14();
   SPDR = y+rowstart; spiWait17(); 
   SPDR = 0; spiWait14();
   SPDR = y+rowstart; spiWait14();
 
-  // write to RAM
   TFT_DC_C;
 }
 
@@ -1153,9 +1145,7 @@ if (addr_col != y) {
   SPDR = color >> 8; spiWait17();
   SPDR = color; spiWait14();
 
-  //CS, HIGH;
   TFT_CS_H;
-  //TFT_DC_D;
 
   spi_end();
 }
@@ -1285,13 +1275,10 @@ void TFT_ST7735::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16
   spi_begin();
 
   int8_t steep = abs(y1 - y0) > abs(x1 - x0);
-  int16_t xmax = _width, ymax = _height;
 
 	if (steep) {
 		swap(x0, y0);
 		swap(x1, y1);
-           ymax = _width;
-           xmax = _height;
 	}
 
 	if (x0 > x1) {
@@ -1308,46 +1295,59 @@ void TFT_ST7735::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16
 	int16_t err = dx / 2;
 	int8_t ystep = (y0 < y1) ? 1 : (-1);
 
-	if (x1 >= xmax) x1 = xmax - 1;
+	if (steep)	// y increments every iteration (y0 is x-axis, and x0 is y-axis)
+	{
+	  if (x1 >= _height) x1 = _height - 1;
 
-	for (; x0 <= x1; x0++) {
-		if ((x0 >= 0) && (y0 >= 0) && (y0 < ymax)) break;
+	  for (; x0 <= x1; x0++) {
+		if ((x0 >= 0) && (y0 >= 0) && (y0 < _width)) break;
 		err -= dy;
 		if (err < 0) {
 			err += dx;
 			y0 += ystep;
 		}
-	}
+	  }
 
-	if (x0 > x1) return;
+	  if (x0 > x1) return;
 
-	if (steep)	// y increments every iteration (y0 is x-axis, and x0 is y-axis)
-	{
-           setAddrWindow(y0, x0, y0, xmax);
+           setWindow(y0, x0, y0, _height);
 		for (; x0 <= x1; x0++) {
 			spiWrite16s(color);
 			err -= dy;
 			if (err < 0) {
 				y0 += ystep;
-				if ((y0 < 0) || (y0 >= ymax)) break;
+				if ((y0 < 0) || (y0 >= _width)) break;
 				err += dx;
 			     //while (!(SPSR & _BV(SPIF))); // Safe, but can comment out and rely on delay
-                     setAddrWindow(y0, x0+1, y0, xmax);
+                     setWindow(y0, x0+1, y0, _height);
 			}
 		}
 	}
 	else	// x increments every iteration (x0 is x-axis, and y0 is y-axis)
 	{
-           setAddrWindow(x0, y0, xmax, y0);
+	  if (x1 >= _width) x1 = _width - 1;
+
+	  for (; x0 <= x1; x0++) {
+		if ((x0 >= 0) && (y0 >= 0) && (y0 < _height)) break;
+		err -= dy;
+		if (err < 0) {
+			err += dx;
+			y0 += ystep;
+		}
+	  }
+
+	  if (x0 > x1) return;
+
+           setWindow(x0, y0, _width, y0);
 		for (; x0 <= x1; x0++) {
 			spiWrite16s(color);
 			err -= dy;
 			if (err < 0) {
 				y0 += ystep;
-				if ((y0 < 0) || (y0 >= ymax)) break;
+				if ((y0 < 0) || (y0 >= _height)) break;
 				err += dx;
 			     //while (!(SPSR & _BV(SPIF))); // Safe, but can comment out and rely on delay
-                     setAddrWindow(x0+1, y0, xmax, y0);
+                     setWindow(x0+1, y0, _width, y0);
 			}
 		}
 	}
@@ -1360,7 +1360,7 @@ void TFT_ST7735::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16
 // Slower but more compact line drawing function
 void TFT_ST7735::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color)
 {
-  boolean steep = abs(y1 - y0) > abs(x1 - x0);
+  int8_t steep = abs(y1 - y0) > abs(x1 - x0);
   if (steep) {
     swap(x0, y0);
     swap(x1, y1);
@@ -1423,7 +1423,7 @@ void TFT_ST7735::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color)
 
   spi_begin();
 
-  setAddrWindow(x, y, x, y + h - 1);
+  setWindow(x, y, x, _height);
 
   spiWrite16(color, h);
   TFT_CS_H;
@@ -1444,7 +1444,7 @@ void TFT_ST7735::drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color)
 #endif
 
   spi_begin();
-  setAddrWindow(x, y, x + w - 1, y);
+  setWindow(x, y, _width, y);
 
   spiWrite16(color, w);
   TFT_CS_H;
@@ -1466,7 +1466,9 @@ void TFT_ST7735::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c
 #endif
 
   spi_begin();
-  setAddrWindow(x, y, x + w - 1, y + h - 1);
+  setWindow(x, y, x + w - 1, y + h - 1);
+
+  if (h > w) swap(h, w);
 
   while (h--) spiWrite16(color, w);
   TFT_CS_H;
@@ -1764,7 +1766,7 @@ int TFT_ST7735::drawChar(unsigned int uniCode, int x, int y, int font)
       // Faster drawing of characters and background using block write
     {
       spi_begin();
-      setAddrWindow(x, y, (x + w * 8) - 1, y + height - 1);
+      setWindow(x, y, (x + w * 8) - 1, y + height - 1);
 
       byte mask;
       for (int i = 0; i < height; i++)
@@ -1837,7 +1839,7 @@ int TFT_ST7735::drawChar(unsigned int uniCode, int x, int y, int font)
           while (line--) { // In this case the while(line--) is faster
             pc++; // This is faster than putting pc+=line before while() as we use up SPI wait time
             while (!(SPSR & _BV(SPIF)));
-            setAddrWindow(px, py, px + ts, py + ts);
+            setWindow(px, py, px + ts, py + ts);
 
             if (ts) {
               tnp = np;
@@ -1876,7 +1878,7 @@ int TFT_ST7735::drawChar(unsigned int uniCode, int x, int y, int font)
          // so use faster drawing of characters and background using block write
     {
       spi_begin();
-      setAddrWindow(x, y, x + width - 1, y + height - 1);
+      setWindow(x, y, x + width - 1, y + height - 1);
 
       // Maximum font size is equivalent to 180x180 pixels in area
       while (w > 0)
@@ -2286,6 +2288,23 @@ inline void spiWait14(void)
     "	adiw	r24,0  \n"	// 5
     "	rcall	1f     \n"	// 12
     "	rjmp 	2f     \n"	// 14
+    "1:	ret    \n"	//
+    "2:	       \n"	//
+  );
+}
+
+/***************************************************************************************
+** Function name:           spiWait
+** Descriptions:            12 cycle delay
+***************************************************************************************/
+inline void spiWait12(void)
+{
+  asm volatile
+  (
+    "	nop         \n"	// 1
+    "	adiw	r24,0  \n"	// 3
+    "	rcall	1f     \n"	// 10
+    "	rjmp 	2f     \n"	// 12
     "1:	ret    \n"	//
     "2:	       \n"	//
   );

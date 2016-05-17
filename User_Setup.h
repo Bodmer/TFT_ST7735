@@ -1,4 +1,4 @@
-//                            USER DEFINED SETTINGS V15
+//                            USER DEFINED SETTINGS V16
 //            Set fonts to be loaded, pins used and SPI control method
 
 // Define the type of display from the colour of the tab on the screen protector

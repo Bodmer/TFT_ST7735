@@ -273,7 +273,7 @@ class TFT_ST7735 : public Print {
            drawPixel(uint16_t x, uint16_t y, uint16_t color),
 
            drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t font),
-           setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1),
+           setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1),
 
            pushColor(uint16_t color),
            pushColor(uint16_t color, uint16_t len),
@@ -349,7 +349,7 @@ class TFT_ST7735 : public Print {
 
  private:
 
-    void  setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1);
+    void   setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1);
 
   uint8_t  tabcolor,
            colstart, rowstart; // some displays need this changed
@@ -368,7 +368,7 @@ class TFT_ST7735 : public Print {
 
   uint16_t textcolor, textbgcolor, fontsloaded;
 
-  uint8_t  addr_row, addr_col;
+  uint8_t  addr_row, addr_col, yaddr_inc;
 
   uint8_t  textfont,
            textsize,
