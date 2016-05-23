@@ -5,11 +5,7 @@
  the sketch fit in an UNO!
 
  Make sure all the required fonts are loaded by editting the
- User_Setup.h file in the TFT_S6D02A1 library folder.
-
- If using an UNO or Mega (ATmega328 or ATmega2560 processor) then for best
- performance use the F_AS_T option found in the User_Setup.h file in the
- TFT_ST7735 library folder.
+ User_Setup.h file in the TFT_ST7735 library folder.
 
  The library uses the hardware SPI pins only:
    For UNO, Nano, Micro Pro ATmega328 based processors
@@ -354,12 +350,8 @@ uint32_t testHaD()
       if (cnt & 0x80)
         cnt = ((cnt & 0x7f) << 8) | pgm_read_byte(cmp++);
 
-#if defined(_PDQ_TFTH_)
       tft.pushColor(curcolor, cnt); // PDQ_GFX has count
-#else
-      while (cnt--)
-        tft.pushColor(curcolor);  // Adafruit needs a loop
-#endif
+
       curcolor ^= color;
     }
   }
