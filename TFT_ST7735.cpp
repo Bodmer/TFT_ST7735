@@ -391,6 +391,11 @@ void TFT_ST7735::init(void)
        {
          commandList(Rcmd2red);
        }
+       else if (tabcolor == INITR_BLACKTAB)
+       {
+         writecommand(ST7735_MADCTL);
+         writedata(0xC0);
+       }
        commandList(Rcmd3);
      }
 }
@@ -715,13 +720,13 @@ void TFT_ST7735::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t y1, 
 
   // Sort coordinates by Y order (y2 >= y1 >= y0)
   if (y0 > y1) {
-    swap(y0, y1); swap(x0, x1);
+    tftswap(y0, y1); tftswap(x0, x1);
   }
   if (y1 > y2) {
-    swap(y2, y1); swap(x2, x1);
+    tftswap(y2, y1); tftswap(x2, x1);
   }
   if (y0 > y1) {
-    swap(y0, y1); swap(x0, x1);
+    tftswap(y0, y1); tftswap(x0, x1);
   }
 
   if (y0 == y2) { // Handle awkward all-on-same-line case as its own thing
@@ -759,7 +764,7 @@ void TFT_ST7735::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t y1, 
     sa += dx01;
     sb += dx02;
 
-    if (a > b) swap(a, b);
+    if (a > b) tftswap(a, b);
     drawFastHLine(a, y, b - a + 1, color);
   }
 
@@ -773,7 +778,7 @@ void TFT_ST7735::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t y1, 
     sa += dx12;
     sb += dx02;
 
-    if (a > b) swap(a, b);
+    if (a > b) tftswap(a, b);
     drawFastHLine(a, y, b - a + 1, color);
   }
 }
@@ -1061,7 +1066,7 @@ void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 
 void TFT_ST7735::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
-  spi_begin();
+
   addr_row = x0;
   addr_col = y0;
 
@@ -1094,7 +1099,6 @@ void TFT_ST7735::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 
   TFT_DC_D;
 
-  spi_end();
 }
 
 /***************************************************************************************
@@ -1196,7 +1200,7 @@ void TFT_ST7735::pushColor(uint16_t color, uint16_t len)
 ** Description:             push an aray of pixels for BMP image drawing
 ***************************************************************************************/
 // Sends an array of 16-bit color values to the TFT; used
-// externally by BMP examples.  Assumes that setWindow() has
+// externally by BMP examples.  Assumes that setAddrWindow() has
 // previously been called to define the bounds.  Max 255 pixels at
 // a time (BMP examples read in small chunks due to limited RAM).
 
@@ -1232,7 +1236,7 @@ void TFT_ST7735::pushColors(uint16_t *data, uint8_t len)
 ** Function name:           pushColors
 ** Description:             push an aray of pixels for 16 bit raw image drawing
 ***************************************************************************************/
-// Assumed that setWindow() has previously been called
+// Assumed that setAddrWindow() has previously been called
 
 void TFT_ST7735::pushColors(uint8_t *data, uint16_t len)
 {
@@ -1277,13 +1281,13 @@ void TFT_ST7735::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16
   int8_t steep = abs(y1 - y0) > abs(x1 - x0);
 
 	if (steep) {
-		swap(x0, y0);
-		swap(x1, y1);
+		tftswap(x0, y0);
+		tftswap(x1, y1);
 	}
 
 	if (x0 > x1) {
-		swap(x0, x1);
-		swap(y0, y1);
+		tftswap(x0, x1);
+		tftswap(y0, y1);
 	}
 
 	if (x1 < 0) return;
@@ -1362,13 +1366,13 @@ void TFT_ST7735::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16
 {
   int8_t steep = abs(y1 - y0) > abs(x1 - x0);
   if (steep) {
-    swap(x0, y0);
-    swap(x1, y1);
+    tftswap(x0, y0);
+    tftswap(x1, y1);
   }
 
   if (x0 > x1) {
-    swap(x0, x1);
-    swap(y0, y1);
+    tftswap(x0, x1);
+    tftswap(y0, y1);
   }
 
   int16_t dx = x1 - x0, dy = abs(y1 - y0);;
@@ -1468,7 +1472,7 @@ void TFT_ST7735::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c
   spi_begin();
   setWindow(x, y, x + w - 1, y + h - 1);
 
-  if (h > w) swap(h, w);
+  if (h > w) tftswap(h, w);
 
   while (h--) spiWrite16(color, w);
   TFT_CS_H;

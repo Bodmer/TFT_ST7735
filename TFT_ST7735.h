@@ -74,7 +74,7 @@
 
 // Swap any type
 template <typename T> static inline void
-swap(T& a, T& b) { T t = a; a = b; b = t; }
+tftswap(T& a, T& b) { T t = a; a = b; b = t; }
 
 //These define the ports and port bits used for the chip select (CS) and data/command (DC) lines
 #define TFT_CS_L	FastPin<TFT_CS>::lo()
@@ -106,10 +106,6 @@ swap(T& a, T& b) { T t = a; a = b; b = t; }
 
 // These are the ST7735 control registers
 // some flags for initR() :(
-#define INITR_GREENTAB 0x0
-#define INITR_REDTAB   0x1
-#define INITR_BLACKTAB  0x2
-#define INITR_GREENTAB2 0x3
 
 #define ST7735_TFTWIDTH  128
 #define ST7735_TFTHEIGHT 160
@@ -368,7 +364,7 @@ class TFT_ST7735 : public Print {
 
   uint16_t textcolor, textbgcolor, fontsloaded;
 
-  uint8_t  addr_row, addr_col, yaddr_inc;
+  uint8_t  addr_row, addr_col;
 
   uint8_t  textfont,
            textsize,
