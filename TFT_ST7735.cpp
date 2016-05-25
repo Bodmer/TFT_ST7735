@@ -1067,8 +1067,8 @@ void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 void TFT_ST7735::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
 
-  addr_row = x0;
-  addr_col = y0;
+  addr_row = 0xFF;
+  addr_col = 0xFF;
 
   // Column addr set
   TFT_DC_C;
