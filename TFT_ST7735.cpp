@@ -101,12 +101,12 @@ TFT_ST7735::TFT_ST7735(int16_t w, int16_t h)
 ***************************************************************************************/
 void TFT_ST7735::spiwrite(uint8_t c)
 {
-  uint8_t backupSPCR = SPCR;
+  savedSPCR = SPCR;
   SPCR = mySPCR;
   SPDR = c;
-  asm volatile( "nop\n\t" ::); // Sync SPIF and some commands need this delay otherwise they get lost!
+  asm volatile( "nop\n\t" ::); // Sync SPIF
   while (!(SPSR & _BV(SPIF)));
-  SPCR = backupSPCR;
+  SPCR = savedSPCR;
 }
 
 /***************************************************************************************
@@ -787,7 +787,8 @@ void TFT_ST7735::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t y1, 
 ** Function name:           drawBitmap
 ** Description:             Draw an image stored in an array on the TFT
 ***************************************************************************************/
-void TFT_ST7735::drawBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t color) {
+void TFT_ST7735::drawBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t color)
+{
 
   int16_t i, j, byteWidth = (w + 7) / 8;
 
@@ -1122,9 +1123,9 @@ if (addr_col != x) {
   addr_col = x;
   TFT_DC_D;
   SPDR = 0; spiWait14();
-  SPDR = x+colstart; spiWait17();
-  SPDR = 0; spiWait14();
-  SPDR = x+colstart; spiWait14();
+  SPDR = x+colstart; spiWait14(); // spiWait17() if we include the next 2 lines
+  //SPDR = 0; spiWait14();
+  //SPDR = x+colstart; spiWait14();
 
   TFT_DC_C;
 }
@@ -1135,9 +1136,9 @@ if (addr_row != y) {
   addr_row = y;
   TFT_DC_D;
   SPDR = 0; spiWait14();
-  SPDR = y+rowstart; spiWait17(); 
-  SPDR = 0; spiWait14();
-  SPDR = y+rowstart; spiWait14();
+  SPDR = y+rowstart; spiWait14(); // spiWait17() if we include the next 2 lines
+  //SPDR = 0; spiWait14();
+  //SPDR = y+rowstart; spiWait14();
 
   TFT_DC_C;
 }
@@ -2193,6 +2194,10 @@ inline void spiWrite16s(uint16_t data)
 
     "	out	%[spi],%[lo]\n"			// write SPI data
     "	nop         \n"	// 1
+
+    " adiw  r24,0	  \n"	// 3
+    " adiw  r24,0      \n"	// 5
+
     "5:\n"
     : [temp] "=d" (temp)
     : [spi] "i" (_SFR_IO_ADDR(SPDR)), [lo] "r" ((uint8_t)data), [hi] "r" ((uint8_t)(data>>8))
