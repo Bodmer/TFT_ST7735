@@ -15,6 +15,16 @@
 
  ****************************************************/
 
+#define MAKE_SMALLER 1
+
+#if defined(__LGT8F__)
+#define WAIT_SPI_FLAGS while((SPFR & _BV(RDEMPT)));
+#define TINY_DELAY "nop\n\t"
+#else
+#define WAIT_SPI_FLAGS while (!(SPSR & _BV(SPIF)));
+#define TINY_DELAY "nop\n\t"
+#endif
+
 #define INITR_GREENTAB  0x0
 #define INITR_REDTAB    0x1
 #define INITR_BLACKTAB  0x2

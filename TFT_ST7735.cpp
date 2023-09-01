@@ -27,6 +27,7 @@ inline void spiWait17(void) __attribute__((always_inline));
 inline void spiWait15(void) __attribute__((always_inline));
 inline void spiWait14(void) __attribute__((always_inline));
 inline void spiWait12(void) __attribute__((always_inline));
+
 inline void spiWrite16(uint16_t data, int16_t count) __attribute__((always_inline));
 inline void spiWrite16s(uint16_t data) __attribute__((always_inline));
 inline void spiWrite16R(uint16_t data, int16_t count) __attribute__((always_inline));
@@ -102,10 +103,19 @@ TFT_ST7735::TFT_ST7735(int16_t w, int16_t h)
 void TFT_ST7735::spiwrite(uint8_t c)
 {
   savedSPCR = SPCR;
+
+#if defined(__LGT8F__) 
+  SPDR = (c);
+  asm volatile(TINY_DELAY ::);
+  WAIT_SPI_FLAGS
+  SPFR = _BV(RDEMPT) | _BV(WREMPT);
+#else
   SPCR = mySPCR;
   SPDR = c;
-  asm volatile( "nop\n\t" ::); // Sync SPIF
-  while (!(SPSR & _BV(SPIF)));
+  asm volatile( TINY_DELAY ::); // Sync SPIF
+  WAIT_SPI_FLAGS
+#endif
+
   SPCR = savedSPCR;
 }
 
@@ -172,7 +182,11 @@ void TFT_ST7735::restoreSPCR() {
 static inline void spi_begin(void) __attribute__((always_inline));
 
 static inline void spi_begin(void) {
+#if defined(__LGT8F__) 
+  SPI.beginTransaction(SPISettings(16000000, MSBFIRST, SPI_MODE0));
+#else
   SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0));
+#endif
 }
 
 static inline void spi_end(void) __attribute__((always_inline));
@@ -437,6 +451,7 @@ void TFT_ST7735::commandList (const uint8_t *addr)
 ***************************************************************************************/
 void TFT_ST7735::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 {
+#ifndef MAKE_SMALLER
   int16_t f = 1 - r;
   int16_t ddF_x = 1;
   int16_t ddF_y = - r - r;
@@ -467,6 +482,7 @@ void TFT_ST7735::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
     drawPixel(x0 - r, y0 - x, color);
     drawPixel(x0 + r, y0 - x, color);
   }
+#endif  
 }
 
 /***************************************************************************************
@@ -515,8 +531,10 @@ void TFT_ST7735::drawCircleHelper( int16_t x0, int16_t y0, int16_t r, uint8_t co
 ***************************************************************************************/
 void TFT_ST7735::fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 {
+#ifndef MAKE_SMALLER
   drawFastVLine(x0, y0 - r, r + r + 1, color);
   fillCircleHelper(x0, y0, r, 3, 0, color);
+#endif
 }
 
 /***************************************************************************************
@@ -559,6 +577,7 @@ void TFT_ST7735::fillCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cor
 ***************************************************************************************/
 void TFT_ST7735::drawEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry, uint16_t color)
 {
+#ifndef MAKE_SMALLER
   if (rx<2) return;
   if (ry<2) return;
   int16_t x, y;
@@ -595,6 +614,7 @@ void TFT_ST7735::drawEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry, uin
     }
     s += rx2 * ((4 * y) + 6);
   }
+#endif
 }
 
 /***************************************************************************************
@@ -603,6 +623,7 @@ void TFT_ST7735::drawEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry, uin
 ***************************************************************************************/
 void TFT_ST7735::fillEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry, uint16_t color)
 {
+#ifndef MAKE_SMALLER
   if (rx<2) return;
   if (ry<2) return;
   int16_t x, y;
@@ -637,7 +658,7 @@ void TFT_ST7735::fillEllipse(int16_t x0, int16_t y0, int16_t rx, int16_t ry, uin
     }
     s += rx2 * ((4 * y) + 6);
   }
-
+#endif
 }
 
 /***************************************************************************************
@@ -704,9 +725,11 @@ void TFT_ST7735::fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16
 // Draw a triangle
 void TFT_ST7735::drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color)
 {
+#ifndef MAKE_SMALLER
   drawLine(x0, y0, x1, y1, color);
   drawLine(x1, y1, x2, y2, color);
   drawLine(x2, y2, x0, y0, color);
+#endif
 }
 
 /***************************************************************************************
@@ -716,6 +739,7 @@ void TFT_ST7735::drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, in
 // Fill a triangle - original Adafruit function works well and code footprint is small
 void TFT_ST7735::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color)
 {
+#ifndef MAKE_SMALLER
   int16_t a, b, y, last;
 
   // Sort coordinates by Y order (y2 >= y1 >= y0)
@@ -781,6 +805,7 @@ void TFT_ST7735::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t y1, 
     if (a > b) tftswap(a, b);
     drawFastHLine(a, y, b - a + 1, color);
   }
+#endif
 }
 
 /***************************************************************************************
@@ -789,6 +814,7 @@ void TFT_ST7735::fillTriangle ( int16_t x0, int16_t y0, int16_t x1, int16_t y1, 
 ***************************************************************************************/
 void TFT_ST7735::drawBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t color)
 {
+#ifndef MAKE_SMALLER
 
   int16_t i, j, byteWidth = (w + 7) / 8;
 
@@ -799,6 +825,7 @@ void TFT_ST7735::drawBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t
       }
     }
   }
+#endif
 }
 
 /***************************************************************************************
@@ -991,25 +1018,25 @@ spi_begin();
     for (int8_t j = 0; j < 8; j++) {
       for (int8_t k = 0; k < 5; k++ ) {
         if (column[k] & mask) {
-          while (!(SPSR & _BV(SPIF)));
-          SPDR = color >> 8; asm volatile( "nop\n\t" ::); // Sync to SPIF bit
-          while (!(SPSR & _BV(SPIF)));
+          WAIT_SPI_FLAGS
+          SPDR = color >> 8; asm volatile( TINY_DELAY ::); // Sync to SPIF bit
+          WAIT_SPI_FLAGS
           SPDR = color;
         }
         else {
-          while (!(SPSR & _BV(SPIF)));
-          SPDR = bg >> 8; asm volatile( "nop\n\t" ::);
-          while (!(SPSR & _BV(SPIF)));
+          WAIT_SPI_FLAGS
+          SPDR = bg >> 8; asm volatile( TINY_DELAY ::);
+          WAIT_SPI_FLAGS
           SPDR = bg;
         }
       }
 
       mask <<= 1;
-      while (!(SPSR & _BV(SPIF)));
-      SPDR = bg >> 8; while (!(SPSR & _BV(SPIF)));
+      WAIT_SPI_FLAGS
+      SPDR = bg >> 8; WAIT_SPI_FLAGS
       SPDR = bg;
     }
-    while (!(SPSR & _BV(SPIF)));
+    WAIT_SPI_FLAGS
   }
   else
   {
@@ -1052,11 +1079,13 @@ spi_end();
 
 void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
+#ifndef MAKE_SMALLER
   spi_begin();
   setWindow(x0, y0, x1, y1);
   TFT_CS_H;
-  while (!(SPSR & _BV(SPIF)));
+  WAIT_SPI_FLAGS
   spi_end();
+#endif
 }
 
 /***************************************************************************************
@@ -1067,7 +1096,6 @@ void TFT_ST7735::setAddrWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 
 void TFT_ST7735::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 {
-
   addr_row = 0xFF;
   addr_col = 0xFF;
 
@@ -1099,7 +1127,6 @@ void TFT_ST7735::setWindow(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
   SPDR = ST7735_RAMWR; spiWait14();
 
   TFT_DC_D;
-
 }
 
 /***************************************************************************************
@@ -1169,9 +1196,9 @@ void TFT_ST7735::pushColor(uint16_t color)
   //SPCR = mySPCR;
 
   SPDR = color>>8;
-  while (!(SPSR & _BV(SPIF)));
+  WAIT_SPI_FLAGS
   SPDR = color;
-  while (!(SPSR & _BV(SPIF)));
+  WAIT_SPI_FLAGS
 
   //SPCR = backupSPCR;
 
@@ -1191,7 +1218,7 @@ void TFT_ST7735::pushColor(uint16_t color, uint16_t len)
   TFT_CS_L;
   spiWrite16(color, len);
   TFT_CS_H;
-  while (!(SPSR & _BV(SPIF)));
+  WAIT_SPI_FLAGS
 
   spi_end();
 }
@@ -1218,6 +1245,9 @@ void TFT_ST7735::pushColors(uint16_t *data, uint8_t len)
     spiWait17(); // Wait 17 clock cycles
     SPDR = color;
     // Wait 9 clock cycles
+#if defined(__LGT8F__)
+  delayMicroseconds(1);
+#else
     asm volatile
     (
       "	rcall	1f     \n"	// 7
@@ -1225,8 +1255,9 @@ void TFT_ST7735::pushColors(uint16_t *data, uint8_t len)
       "1:	ret    \n"	//
       "2:	       \n"	//
     );
+#endif
   }
-  while (!(SPSR & _BV(SPIF)));
+  WAIT_SPI_FLAGS
 
   TFT_CS_H;
 
@@ -1248,6 +1279,9 @@ void TFT_ST7735::pushColors(uint8_t *data, uint16_t len)
   while (len--) {
     SPDR = *(data++);
     // Wait 11 clock cycles
+#if defined(__LGT8F__)
+  delayMicroseconds(1);
+#else
     asm volatile
     (
       "	adiw	r24,0  \n"	// 2
@@ -1256,10 +1290,11 @@ void TFT_ST7735::pushColors(uint8_t *data, uint16_t len)
       "1:	ret    \n"	//
       "2:	       \n"	//
     );
+#endif
   }
   TFT_CS_H;
 
-  while (!(SPSR & _BV(SPIF)));
+  WAIT_SPI_FLAGS
   spi_end();
 }
 
@@ -1323,7 +1358,7 @@ void TFT_ST7735::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16
 				y0 += ystep;
 				if ((y0 < 0) || (y0 >= _width)) break;
 				err += dx;
-			     //while (!(SPSR & _BV(SPIF))); // Safe, but can comment out and rely on delay
+			     //WAIT_SPI_FLAGS // Safe, but can comment out and rely on delay
                      setWindow(y0, x0+1, y0, _height);
 			}
 		}
@@ -1351,7 +1386,7 @@ void TFT_ST7735::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16
 				y0 += ystep;
 				if ((y0 < 0) || (y0 >= _height)) break;
 				err += dx;
-			     //while (!(SPSR & _BV(SPIF))); // Safe, but can comment out and rely on delay
+			     //WAIT_SPI_FLAGS // Safe, but can comment out and rely on delay
                      setWindow(x0+1, y0, _width, y0);
 			}
 		}
@@ -1783,15 +1818,15 @@ int TFT_ST7735::drawChar(unsigned int uniCode, int x, int y, int font)
           mask = 0x80;
           while (mask) {
             if (line & mask) {
-              while (!(SPSR & _BV(SPIF)));
-              SPDR = th; asm volatile( "nop\n\t" ::);
-              while (!(SPSR & _BV(SPIF)));
+              WAIT_SPI_FLAGS
+              SPDR = th; asm volatile( TINY_DELAY ::);
+              WAIT_SPI_FLAGS
               SPDR = tl;
             }
             else {
-              while (!(SPSR & _BV(SPIF)));
-              SPDR = bh; asm volatile( "nop\n\t" ::);
-              while (!(SPSR & _BV(SPIF)));
+              WAIT_SPI_FLAGS
+              SPDR = bh; asm volatile( TINY_DELAY ::);
+              WAIT_SPI_FLAGS
               SPDR = bl;
             }
             mask = mask >> 1;
@@ -1799,7 +1834,7 @@ int TFT_ST7735::drawChar(unsigned int uniCode, int x, int y, int font)
         }
         pY += textsize;
       }
-      while (!(SPSR & _BV(SPIF)));
+      WAIT_SPI_FLAGS
       writeEnd();
       spi_end();
     }
@@ -1843,22 +1878,22 @@ int TFT_ST7735::drawChar(unsigned int uniCode, int x, int y, int font)
           }
           while (line--) { // In this case the while(line--) is faster
             pc++; // This is faster than putting pc+=line before while() as we use up SPI wait time
-            while (!(SPSR & _BV(SPIF)));
+            WAIT_SPI_FLAGS
             setWindow(px, py, px + ts, py + ts);
 
             if (ts) {
               tnp = np;
               while (tnp--) {
-                while (!(SPSR & _BV(SPIF)));
+                WAIT_SPI_FLAGS
                 SPDR = th;
-                while (!(SPSR & _BV(SPIF)));
+                WAIT_SPI_FLAGS
                 SPDR = tl;
               }
             }
             else {
-              while (!(SPSR & _BV(SPIF)));
+              WAIT_SPI_FLAGS
               SPDR = th;
-              while (!(SPSR & _BV(SPIF)));
+              WAIT_SPI_FLAGS
               SPDR = tl;
             }
             px += textsize;
@@ -1875,7 +1910,7 @@ int TFT_ST7735::drawChar(unsigned int uniCode, int x, int y, int font)
           pc += line;
         }
       }
-      while (!(SPSR & _BV(SPIF)));
+      WAIT_SPI_FLAGS
       writeEnd();
       spi_end();
     }
@@ -1899,7 +1934,7 @@ int TFT_ST7735::drawChar(unsigned int uniCode, int x, int y, int font)
           spiWrite16(textbgcolor, line);
         }
       }
-      while (!(SPSR & _BV(SPIF)));
+      WAIT_SPI_FLAGS
       writeEnd();
       spi_end();
     }
@@ -2031,12 +2066,16 @@ return sumX;
 ***************************************************************************************/
 int TFT_ST7735::drawCentreString(char *string, int dX, int poY, int font)
 {
+#ifndef MAKE_SMALLER
   byte tempdatum = textdatum;
   int sumX = 0;
   textdatum = TC_DATUM;
   sumX = drawString(string, dX, poY, font);
   textdatum = tempdatum;
   return sumX;
+#else
+  return 0;
+#endif  
 }
 
 /***************************************************************************************
@@ -2045,12 +2084,16 @@ int TFT_ST7735::drawCentreString(char *string, int dX, int poY, int font)
 ***************************************************************************************/
 int TFT_ST7735::drawRightString(char *string, int dX, int poY, int font)
 {
+#ifndef MAKE_SMALLER
   byte tempdatum = textdatum;
   int sumX = 0;
   textdatum = TR_DATUM;
   sumX = drawString(string, dX, poY, font);
   textdatum = tempdatum;
   return sumX;
+#else
+  return 0;
+#endif  
 }
 
 /***************************************************************************************
@@ -2059,9 +2102,13 @@ int TFT_ST7735::drawRightString(char *string, int dX, int poY, int font)
 ***************************************************************************************/
 int TFT_ST7735::drawNumber(long long_num, int poX, int poY, int font)
 {
+#ifndef MAKE_SMALLER
   char str[12];
   ltoa(long_num, str, 10);
   return drawString(str, poX, poY, font);
+#else
+  return NULL;
+#endif  
 }
 
 /***************************************************************************************
@@ -2072,6 +2119,7 @@ int TFT_ST7735::drawNumber(long long_num, int poX, int poY, int font)
 // looks complicated but much more compact and actually faster than using print class
 int TFT_ST7735::drawFloat(float floatNumber, int dp, int poX, int poY, int font)
 {
+#ifndef MAKE_SMALLER
   char str[14];               // Array to contain decimal string
   uint8_t ptr = 0;            // Initialise pointer for array
   int8_t  digits = 1;         // Count the digits to avoid array overflow
@@ -2131,7 +2179,35 @@ int TFT_ST7735::drawFloat(float floatNumber, int dp, int poX, int poY, int font)
   
   // Finally we can plot the string and return pixel length
   return drawString(str, poX, poY, font);
+#else
+  return NULL;
+#endif  
 }
+
+#if defined(__LGT8F__)
+inline void spiWrite16(uint16_t data, int16_t count)
+{
+  uint16_t i;
+  for(i=0; i< count; i++) 
+   {
+    SPDR = data >>8;
+    asm volatile( TINY_DELAY ::); 
+    WAIT_SPI_FLAGS
+
+    asm volatile( TINY_DELAY ::); 
+
+    SPDR = data;
+    asm volatile( TINY_DELAY ::); 
+    WAIT_SPI_FLAGS
+  }
+}
+
+inline void spiWrite16s(uint16_t data)
+{
+  spiWrite16(data, 1);
+}
+
+#else
 
 /***************************************************************************************
 ** Function name:           spiWrite16
@@ -2204,6 +2280,7 @@ inline void spiWrite16s(uint16_t data)
     :
   );
 }
+#endif
 
 
 /***************************************************************************************
@@ -2215,6 +2292,7 @@ inline void spiWrite16R(uint16_t data, int16_t count)
 // We can enter this loop with 0 pixels to draw, so we need to check this
 // if(count<1) { Serial.print("#### Less than 1 ####"); Serial.println(count);}
 
+#ifndef MAKE_SMALLER
   uint8_t temp;
   asm volatile
   (
@@ -2248,6 +2326,7 @@ inline void spiWrite16R(uint16_t data, int16_t count)
     : [spi] "i" (_SFR_IO_ADDR(SPDR)), [lo] "r" ((uint8_t)(data>>8)), [hi] "r" ((uint8_t)data)
     :
   );
+#endif
 }
 
 /***************************************************************************************
@@ -2256,6 +2335,9 @@ inline void spiWrite16R(uint16_t data, int16_t count)
 ***************************************************************************************/
 inline void spiWait17(void)
 {
+#if defined(__LGT8F__)
+  delayMicroseconds(1);
+#else
   asm volatile
   (
     "	rcall	1f    \n" // 7
@@ -2264,6 +2346,7 @@ inline void spiWait17(void)
     "1:	ret   \n" // 
     "2:	nop	 \n" // 17
   );
+ #endif
 }
 
 /***************************************************************************************
@@ -2272,6 +2355,9 @@ inline void spiWait17(void)
 ***************************************************************************************/
 inline void spiWait15(void)
 {
+#if defined(__LGT8F__)
+  delayMicroseconds(1);
+#else
   asm volatile
   (
     "	adiw	r24,0  \n"	// 2
@@ -2282,6 +2368,7 @@ inline void spiWait15(void)
     "1:	ret    \n"	//
     "2:	       \n"	//
   );
+#endif
 }
 
 /***************************************************************************************
@@ -2290,6 +2377,9 @@ inline void spiWait15(void)
 ***************************************************************************************/
 inline void spiWait14(void)
 {
+#if defined(__LGT8F__)
+  delayMicroseconds(1);
+#else
   asm volatile
   (
     "	nop         \n"	// 1
@@ -2300,6 +2390,7 @@ inline void spiWait14(void)
     "1:	ret    \n"	//
     "2:	       \n"	//
   );
+#endif
 }
 
 /***************************************************************************************
@@ -2308,6 +2399,9 @@ inline void spiWait14(void)
 ***************************************************************************************/
 inline void spiWait12(void)
 {
+#if defined(__LGT8F__)
+  delayMicroseconds(1);
+#else
   asm volatile
   (
     "	nop         \n"	// 1
@@ -2317,6 +2411,7 @@ inline void spiWait12(void)
     "1:	ret    \n"	//
     "2:	       \n"	//
   );
+#endif
 }
 
 /***************************************************
